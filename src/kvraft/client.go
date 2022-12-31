@@ -3,7 +3,6 @@ package kvraft
 import (
 	"crypto/rand"
 	"math/big"
-	"sync"
 	"sync/atomic"
 
 	"../labrpc"
@@ -13,9 +12,7 @@ type Clerk struct {
 	me           int64               // id of the clerk
 	servers      []*labrpc.ClientEnd // list of servers
 	cachedLeader int64               // last seen leader
-	idMutex      sync.Mutex          // mutex to assign ids of operations
 	maxRequestId int64               // maximum request id assigned at any point
-	leaderMutex  sync.Mutex          // mutex to synchronize access to the cached leader
 
 	// You will have to modify this struct.
 }
@@ -31,7 +28,7 @@ func MakeClerk(servers []*labrpc.ClientEnd) *Clerk {
 	ck := new(Clerk)
 	ck.servers = servers
 	ck.me = nrand()
-	ck.maxRequestId = 0
+	ck.maxRequestId = -1
 	ck.cachedLeader = 0
 	// You'll have to add code here.
 	return ck
@@ -115,14 +112,12 @@ func (ck *Clerk) PutAppend(key string, value string, op string) {
 }
 
 func (ck *Clerk) Put(key string, value string) {
-	ck.PutAppend(key, value, "Put")
+	ck.PutAppend(key, value, PutOp)
 }
 func (ck *Clerk) Append(key string, value string) {
-	ck.PutAppend(key, value, "Append")
+	ck.PutAppend(key, value, AppendOp)
 }
 
 func (ck *Clerk) GetRequestId() int64 {
-	atomic.AddInt64(&ck.maxRequestId, 1)
-	newId := atomic.LoadInt64(&ck.maxRequestId)
-	return newId
+	return atomic.AddInt64(&ck.maxRequestId, 1)
 }
